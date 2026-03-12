@@ -1,0 +1,122 @@
+version: "3.8"
+
+services:
+  # ─── Frontend ────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    environment:
+      - VITE_API_BASE_URL=http://localhost:8000
+      - VITE_WS_URL=ws://localhost:8000/ws/queue-status
+    networks:
+      - app-network
+
+  # ─── Backend API ─────────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    volumes:
+      - shared-tmp:/tmp/facebook_data
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      - redis
+      - mongodb
+    networks:
+      - app-network
+
+  # ─── Celery Worker (Scrape + Ingest Tasks) ──────────────────
+  celery-worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    command: celery -A app.tasks.celery_app worker -l info -Q scrape_queue,ingest_queue -c 1
+    env_file:
+      - .env
+    volumes:
+      - shared-tmp:/tmp/facebook_data
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      - redis
+      - mongodb
+      - scraper-bot
+    networks:
+      - app-network
+
+  # ─── Celery Beat (Periodic Scheduler) ───────────────────────
+  celery-beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    command: celery -A app.tasks.celery_app beat -l info
+    env_file:
+      - .env
+    depends_on:
+      - redis
+    networks:
+      - app-network
+
+  # ─── Scraper Bot (Existing) ─────────────────────────────────
+  scraper-bot:
+    build:
+      context: ./scraper
+      dockerfile: Dockerfile
+    container_name: scraper-bot
+    environment:
+      - HTTP_PASSWORD=123456
+      - VNC_PASSWORD=123456
+      - USER=root
+      - PASSWORD=123456
+      - RESOLUTION=1920x1080
+      - TEMP_DIR=/tmp
+    ports:
+      - "6090:80"
+      - "5801:5900"
+    volumes:
+      - /dev/shm:/dev/shm
+      - shared-tmp:/tmp/facebook_data
+    restart: always
+    user: root
+    networks:
+      - app-network
+
+  # ─── Redis ──────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - app-network
+
+  # ─── MongoDB ────────────────────────────────────────────────
+  mongodb:
+    image: mongo:7
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+      - ./scripts/init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js:ro
+    environment:
+      - MONGO_INITDB_DATABASE=facebook_scraper
+    networks:
+      - app-network
+
+volumes:
+  shared-tmp:
+  redis-data:
+  mongo-data:
+
+networks:
+  app-network:
+    driver: bridge

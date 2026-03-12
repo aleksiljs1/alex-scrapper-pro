@@ -1,0 +1,19 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+schedule/output
+# Virtual environments
+.venv
+venv
+output/
+example/
+schedule/facebook_cookies.json
+manual/facebook_cookies.json
+manual/profile/facebook_cookies.json
+search/facebook_cookies.json
+manual/attachments
+manual/profile_pictures

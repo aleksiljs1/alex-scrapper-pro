@@ -1,0 +1,13 @@
+[project]
+name = "facebook-comment-scraper"
+version = "0.1.0"
+description = "Facebook comment scraper using Chrome DevTools Protocol"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+  "fastapi>=0.117.1",
+  "requests>=2.32.5",
+  "selenium>=4.0.0",
+  "uvicorn>=0.37.0",
+  "webdriver-manager>=4.0.0",
+]

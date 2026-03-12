@@ -1,0 +1,36 @@
+version: "3"
+
+services:
+  bot:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    environment:
+      - HTTP_PASSWORD=123456
+      - VNC_PASSWORD=123456
+      - SSL_PORT=443
+      - USER=root
+      - PASSWORD=123456
+      - RELATIVE_URL_ROOT=bot
+      - RESOLUTION=1920x1080
+      - ALSADEV=hw:2,0
+      - TEMP_DIR=/tmp
+    ports:
+      - 6090:80
+      - 6091:443
+      - 5801:5900
+    volumes:
+      - /dev/shm:/dev/shm
+    #   - ./sims_rescraper/ssl:/etc/nginx/ssl
+    restart: always
+    user: root
+    hostname: ${HOSTNAME:-bot}
+    networks:
+      - smm-scrapers-v2
+
+
+volumes:
+  cookiejar:  # for storing cookies from webdriver login sessions 
+
+networks:
+  smm-scrapers-v2:

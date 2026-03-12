@@ -1,0 +1,18 @@
+[project]
+name = "facebook-scraper-backend"
+version = "0.1.0"
+description = "Facebook Profile Scraper Backend API"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.34.0",
+    "motor>=3.6.0",
+    "pymongo>=4.10.0",
+    "celery[redis]>=5.4.0",
+    "redis>=5.2.0",
+    "pydantic-settings>=2.6.0",
+    "python-multipart>=0.0.18",
+    "websockets>=14.0",
+    "httpx>=0.28.0",
+    "docker>=7.1.0",
+]
