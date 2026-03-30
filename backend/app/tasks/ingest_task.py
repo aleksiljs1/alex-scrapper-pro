@@ -443,7 +443,8 @@ def ingest_profile_json(self, profile_id: str, url: str, json_file_path: str):
                     "scraped_at": scraped_data.get("scraped_at"),
                     "updated_at": datetime.utcnow(),
                     "json_file_path": json_file_path,
-                }
+                },
+                "$unset": {"error_message": ""},
             },
         )
 

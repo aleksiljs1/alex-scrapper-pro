@@ -6,13 +6,13 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: http://100.64.132.90:9000
+        VITE_WS_URL: ws://100.64.132.90:9000/ws/queue-status
     ports:
-      - "3000:80"
+      - "9030:80"
     depends_on:
       - backend
-    environment:
-      - VITE_API_BASE_URL=http://localhost:8000
-      - VITE_WS_URL=ws://localhost:8000/ws/queue-status
     networks:
       - app-network
 
@@ -22,7 +22,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     ports:
-      - "8000:8000"
+      - "9000:8000"
     env_file:
       - .env
     volumes:
@@ -39,7 +39,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    command: celery -A app.tasks.celery_app worker -l info -Q scrape_queue,ingest_queue -c 1
+    command: celery -A app.tasks.celery_app worker -l info -Q scrape_queue,ingest_queue -c 8
     env_file:
       - .env
     volumes:
@@ -48,7 +48,14 @@ services:
     depends_on:
       - redis
       - mongodb
-      - scraper-bot
+      - scraper-bot-1
+      - scraper-bot-2
+      - scraper-bot-3
+      - scraper-bot-4
+      - scraper-bot-5
+      - scraper-bot-6
+      - scraper-bot-7
+      - scraper-bot-8
     networks:
       - app-network
 
@@ -65,12 +72,12 @@ services:
     networks:
       - app-network
 
-  # ─── Scraper Bot (Existing) ─────────────────────────────────
-  scraper-bot:
+  # ─── Scraper Bots (4 parallel instances) ───────────────────
+  scraper-bot-1:
     build:
       context: ./scraper
       dockerfile: Dockerfile
-    container_name: scraper-bot
+    container_name: scraper-bot-1
     environment:
       - HTTP_PASSWORD=123456
       - VNC_PASSWORD=123456
@@ -79,8 +86,169 @@ services:
       - RESOLUTION=1920x1080
       - TEMP_DIR=/tmp
     ports:
-      - "6090:80"
-      - "5801:5900"
+      - "9091:80"
+      - "9802:5900"
+    volumes:
+      - /dev/shm:/dev/shm
+      - shared-tmp:/tmp/facebook_data
+    restart: always
+    user: root
+    networks:
+      - app-network
+
+  scraper-bot-2:
+    build:
+      context: ./scraper
+      dockerfile: Dockerfile
+    container_name: scraper-bot-2
+    environment:
+      - HTTP_PASSWORD=123456
+      - VNC_PASSWORD=123456
+      - USER=root
+      - PASSWORD=123456
+      - RESOLUTION=1920x1080
+      - TEMP_DIR=/tmp
+    ports:
+      - "9092:80"
+      - "9803:5900"
+    volumes:
+      - /dev/shm:/dev/shm
+      - shared-tmp:/tmp/facebook_data
+    restart: always
+    user: root
+    networks:
+      - app-network
+
+  scraper-bot-3:
+    build:
+      context: ./scraper
+      dockerfile: Dockerfile
+    container_name: scraper-bot-3
+    environment:
+      - HTTP_PASSWORD=123456
+      - VNC_PASSWORD=123456
+      - USER=root
+      - PASSWORD=123456
+      - RESOLUTION=1920x1080
+      - TEMP_DIR=/tmp
+    ports:
+      - "9093:80"
+      - "9804:5900"
+    volumes:
+      - /dev/shm:/dev/shm
+      - shared-tmp:/tmp/facebook_data
+    restart: always
+    user: root
+    networks:
+      - app-network
+
+  scraper-bot-4:
+    build:
+      context: ./scraper
+      dockerfile: Dockerfile
+    container_name: scraper-bot-4
+    environment:
+      - HTTP_PASSWORD=123456
+      - VNC_PASSWORD=123456
+      - USER=root
+      - PASSWORD=123456
+      - RESOLUTION=1920x1080
+      - TEMP_DIR=/tmp
+    ports:
+      - "9094:80"
+      - "9805:5900"
+    volumes:
+      - /dev/shm:/dev/shm
+      - shared-tmp:/tmp/facebook_data
+    restart: always
+    user: root
+    networks:
+      - app-network
+
+  scraper-bot-5:
+    build:
+      context: ./scraper
+      dockerfile: Dockerfile
+    container_name: scraper-bot-5
+    environment:
+      - HTTP_PASSWORD=123456
+      - VNC_PASSWORD=123456
+      - USER=root
+      - PASSWORD=123456
+      - RESOLUTION=1920x1080
+      - TEMP_DIR=/tmp
+    ports:
+      - "9095:80"
+      - "9806:5900"
+    volumes:
+      - /dev/shm:/dev/shm
+      - shared-tmp:/tmp/facebook_data
+    restart: always
+    user: root
+    networks:
+      - app-network
+
+  scraper-bot-6:
+    build:
+      context: ./scraper
+      dockerfile: Dockerfile
+    container_name: scraper-bot-6
+    environment:
+      - HTTP_PASSWORD=123456
+      - VNC_PASSWORD=123456
+      - USER=root
+      - PASSWORD=123456
+      - RESOLUTION=1920x1080
+      - TEMP_DIR=/tmp
+    ports:
+      - "9096:80"
+      - "9807:5900"
+    volumes:
+      - /dev/shm:/dev/shm
+      - shared-tmp:/tmp/facebook_data
+    restart: always
+    user: root
+    networks:
+      - app-network
+
+  scraper-bot-7:
+    build:
+      context: ./scraper
+      dockerfile: Dockerfile
+    container_name: scraper-bot-7
+    environment:
+      - HTTP_PASSWORD=123456
+      - VNC_PASSWORD=123456
+      - USER=root
+      - PASSWORD=123456
+      - RESOLUTION=1920x1080
+      - TEMP_DIR=/tmp
+    ports:
+      - "9097:80"
+      - "9808:5900"
+    volumes:
+      - /dev/shm:/dev/shm
+      - shared-tmp:/tmp/facebook_data
+    restart: always
+    user: root
+    networks:
+      - app-network
+
+  scraper-bot-8:
+    build:
+      context: ./scraper
+      dockerfile: Dockerfile
+    container_name: scraper-bot-8
+    environment:
+      - HTTP_PASSWORD=123456
+      - VNC_PASSWORD=123456
+      - USER=root
+      - PASSWORD=123456
+      - RESOLUTION=1920x1080
+      - TEMP_DIR=/tmp
+    ports:
+      - "9098:80"
+      - "9809:5900"
     volumes:
       - /dev/shm:/dev/shm
       - shared-tmp:/tmp/facebook_data
@@ -92,8 +260,6 @@ services:
   # ─── Redis ──────────────────────────────────────────────────
   redis:
     image: redis:7-alpine
-    ports:
-      - "6379:6379"
     volumes:
       - redis-data:/data
     networks:
@@ -103,7 +269,7 @@ services:
   mongodb:
     image: mongo:7
     ports:
-      - "27017:27017"
+      - "9017:27017"
     volumes:
       - mongo-data:/data/db
       - ./scripts/init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js:ro

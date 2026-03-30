@@ -1,12 +1,30 @@
 import docker
 import glob
 import os
+import redis as redis_lib
 from datetime import datetime, timedelta
 
 from bson import ObjectId
 from app.tasks.celery_app import celery_app
 from app.config import settings
 from app.services.queue_service import publish_status
+
+
+def _claim_container(timeout: int = 600) -> str:
+    """Block until a scraper-bot container is available, then claim it."""
+    r = redis_lib.Redis.from_url(settings.REDIS_URL)
+    result = r.blpop(settings.SCRAPER_BOT_POOL_KEY, timeout=timeout)
+    r.close()
+    if not result:
+        raise Exception("No scraper bot available in pool (timeout after 10 min)")
+    return result[1].decode()
+
+
+def _release_container(container_name: str):
+    """Return a scraper-bot container back to the pool."""
+    r = redis_lib.Redis.from_url(settings.REDIS_URL)
+    r.lpush(settings.SCRAPER_BOT_POOL_KEY, container_name)
+    r.close()
 
 
 @celery_app.task(bind=True, max_retries=2, default_retry_delay=30)
@@ -36,19 +54,27 @@ def scrape_profile(self, profile_id: str, url: str):
         os.makedirs(output_dir, exist_ok=True)
         existing_files = set(glob.glob(os.path.join(output_dir, "profile_*.json")))
 
-        # Execute the scraper bot via Docker SDK
-        client = docker.DockerClient(base_url="unix:///var/run/docker.sock")
-        container = client.containers.get(settings.SCRAPER_CONTAINER_NAME)
-        exec_result = container.exec_run(
-            cmd=["/python/bin/python", "/app/run_scrape.py", url],
-            environment={
-                "DISPLAY": ":1",
-                "HOME": "/root",
-                "FB_USERNAME": settings.FB_USERNAME,
-                "FB_PASSWORD": settings.FB_PASSWORD,
-            },
-            demux=True,
+        # Claim an available scraper-bot from the pool
+        container_name = _claim_container()
+        collection.update_one(
+            {"_id": ObjectId(profile_id)},
+            {"$set": {"assigned_bot": container_name, "updated_at": datetime.utcnow()}},
         )
+        try:
+            client = docker.DockerClient(base_url="unix:///var/run/docker.sock")
+            container = client.containers.get(container_name)
+            exec_result = container.exec_run(
+                cmd=["/python/bin/python", "/app/run_scrape.py", url],
+                environment={
+                    "DISPLAY": ":1",
+                    "HOME": "/root",
+                    "FB_USERNAME": settings.FB_USERNAME,
+                    "FB_PASSWORD": settings.FB_PASSWORD,
+                },
+                demux=True,
+            )
+        finally:
+            _release_container(container_name)
 
         stdout = (exec_result.output[0] or b"").decode()
         stderr = (exec_result.output[1] or b"").decode()

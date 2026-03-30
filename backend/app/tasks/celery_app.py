@@ -13,8 +13,7 @@ celery_app.conf.update(
     result_serializer="json",
     timezone="UTC",
     enable_utc=True,
-    # ONE task at a time to avoid overloading the bot
-    worker_concurrency=1,
+    worker_concurrency=4,
     worker_prefetch_multiplier=1,
     # Task routing
     task_routes={
@@ -41,3 +40,18 @@ celery_app.autodiscover_tasks(["app.tasks.scrape_task", "app.tasks.ingest_task"]
 # Ensure modules are imported so tasks are registered with the worker
 import app.tasks.scrape_task  # noqa: F401, E402
 import app.tasks.ingest_task  # noqa: F401, E402
+
+# Seed the scraper-bot pool in Redis when the worker starts
+from celery.signals import worker_ready
+
+@worker_ready.connect
+def init_scraper_pool(sender, **kwargs):
+    import redis as redis_lib
+    from app.config import settings
+    r = redis_lib.Redis.from_url(settings.REDIS_URL)
+    # Always reset the pool on worker startup to match current config
+    r.delete(settings.SCRAPER_BOT_POOL_KEY)
+    for name in settings.SCRAPER_CONTAINER_NAMES:
+        r.lpush(settings.SCRAPER_BOT_POOL_KEY, name)
+    print(f"Seeded scraper pool: {settings.SCRAPER_CONTAINER_NAMES}")
+    r.close()

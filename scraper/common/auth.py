@@ -116,12 +116,23 @@ class FacebookAuth:
             return False
 
     def verify_facebook_login(self, max_tabs=100):
-        """Verify Facebook login by checking for navigation elements using Tab navigation"""
+        """Verify Facebook login by checking URL first, then navigation elements"""
         try:
             required_elements = ["Friends", "Saved"]
             found_elements = []
 
             print("🔍 Verifying login by checking for navigation elements...")
+
+            # --- URL-based check first ---
+            # If we're not on a login/checkpoint/security page, login already succeeded
+            current_url = self.driver.current_url
+            print(f"🌐 Current URL: {current_url}")
+            login_blocked_patterns = ["login", "checkpoint", "recover", "two_step", "arkose", "security"]
+            if "facebook.com" in current_url and not any(p in current_url for p in login_blocked_patterns):
+                print("✅ URL indicates successful login — skipping tab navigation")
+                if self.cookies_file_path:
+                    self.save_cookies(self.cookies_file_path)
+                return True
 
             # Press Tab up to max_tabs times to find required elements
             for tab_count in range(max_tabs):
